@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>تدريب التحدث بالإنجليزي | English Speaking Practice</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    min-height: 100vh;
+    padding: 16px;
+    color: #1f2937;
+  }
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  }
+  h1 {
+    text-align: center;
+    color: #4f46e5;
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    line-height: 1.4;
+  }
+  .status {
+    text-align: center;
+    padding: 14px;
+    background: #f3f4f6;
+    border-radius: 14px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    color: #374151;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+  }
+  .status.listening { background: #dcfce7; color: #166534; }
+  .status.speaking { background: #dbeafe; color: #1e40af; }
+  .status.error { background: #fee2e2; color: #991b1b; }
+  .mic-btn {
+    width: 100%;
+    height: 90px;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 18px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 18px;
+    transition: all 0.15s;
+  }
+  .mic-btn:active { transform: scale(0.97); }
+  .mic-btn.listening { background: #ef4444; }
+  .box {
+    background: #f9fafb;
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 14px;
+    border: 1px solid #e5e7eb;
+  }
+  .box h3 {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 6px;
+  }
+  .box p {
+    font-size: 1.1rem;
+    line-height: 1.5;
+    color: #111827;
+  }
+  .better { color: #15803d; font-weight: 600; }
+  .tips {
+    font-size: 0.82rem;
+    color: #6b7280;
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.6;
+    background: #f8fafc;
+    padding: 12px;
+    border-radius: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎙️ تدريب التحدث</h1>
+  <div class="subtitle">
+    اتكلم إنجليزي → هسمعك → هرد عليك بصوت + تصحيح<br>
+    Speak English → I listen → I reply with voice + correction
+  </div>
+
+  <div class="status" id="status">
+    جاهز / Ready
+  </div>
+
+  <button class="mic-btn" id="micBtn">
+    🎤 اضغط وتكلم<br>Tap & Speak
+  </button>
+
+  <div class="box">
+    <h3>أنت قلت / You said:</h3>
+    <p id="userSaid">...</p>
+  </div>
+
+  <div class="box">
+    <h3>التصحيح / Correction:</h3>
+    <p id="correction">...</p>
+  </div>
+
+  <div class="box">
+    <h3>ردي / My reply:</h3>
+    <p id="reply">...</p>
+  </div>
+
+  <div class="tips">
+    • استخدم جوجل كروم<br>
+    • وافق على المايك لما يطلب<br>
+    • اتكلم ببطء ووضوح<br><br>
+    Use Google Chrome<br>
+    Allow microphone when asked<br>
+    Speak slowly and clearly
+  </div>
+</div>
+
+<script>
+const micBtn = document.getElementById('micBtn');
+const statusEl = document.getElementById('status');
+const userSaidEl = document.getElementById('userSaid');
+const correctionEl = document.getElementById('correction');
+const replyEl = document.getElementById('reply');
+
+let recognition;
+let isListening = false;
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+  statusEl.className = 'status error';
+  statusEl.textContent = 'استخدم جوجل كروم / Please use Google Chrome';
+  micBtn.disabled = true;
+} else {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    isListening = true;
+    micBtn.classList.add('listening');
+    micBtn.innerHTML = '🔴 بيتسمع...<br>Listening...';
+    statusEl.className = 'status listening';
+    statusEl.textContent = 'بيتسمعك دلوقتي... / Listening...';
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript.trim();
+    processSpeech(transcript);
+  };
+
+  recognition.onerror = (event) => {
+    statusEl.className = 'status error';
+    if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+      statusEl.textContent = 'اسمح بالمايك من إعدادات المتصفح / Allow microphone';
+    } else if (event.error === 'no-speech') {
+      statusEl.textContent = 'ما سمعتش حاجة، جرب تاني / No speech detected, try again';
+    } else {
+      statusEl.textContent = 'حصل خطأ، جرب تاني / Error, try again';
+    }
+    resetMic();
+  };
+
+  recognition.onend = () => {
+    if (isListening) resetMic();
+  };
+}
+
+function resetMic() {
+  isListening = false;
+  micBtn.classList.remove('listening');
+  micBtn.innerHTML = '🎤 اضغط وتكلم<br>Tap & Speak';
+  if (!statusEl.classList.contains('error')) {
+    statusEl.className = 'status';
+    statusEl.textContent = 'جاهز / Ready';
+  }
+}
+
+micBtn.onclick = () => {
+  if (!recognition) return;
+  if (isListening) {
+    recognition.stop();
+    return;
+  }
+  userSaidEl.textContent = '...';
+  correctionEl.textContent = '...';
+  replyEl.textContent = '...';
+  statusEl.className = 'status';
+  statusEl.textContent = 'بيجهز المايك... / Starting mic...';
+  try {
+    recognition.start();
+  } catch (e) {
+    statusEl.className = 'status error';
+    statusEl.textContent = 'ما قدرناش نشغل المايك / Could not start microphone';
+  }
+};
+
+function processSpeech(text) {
+  userSaidEl.textContent = text || '(ما سمعتش حاجة / Nothing heard)';
+
+  const corrected = simpleCorrect(text);
+  if (corrected.toLowerCase() !== text.toLowerCase()) {
+    correctionEl.innerHTML = `أحسن تقول / Better say:<br><span class="better">${corrected}</span>`;
+  } else {
+    correctionEl.textContent = 'كويس جدًا! / Very good!';
+  }
+
+  const reply = generateReply(text);
+  replyEl.textContent = reply;
+  speak(reply);
+}
+
+function simpleCorrect(text) {
+  if (!text) return text;
+  let t = text.trim();
+  t = t.charAt(0).toUpperCase() + t.slice(1);
+  if (!/[.!?]$/.test(t)) t += '.';
+  t = t.replace(/\bi am\b/gi, 'I am');
+  t = t.replace(/\bi\b/g, 'I');
+  t = t.replace(/\bmy name is\b/gi, 'My name is');
+  return t;
+}
+
+function generateReply(text) {
+  const lower = text.toLowerCase();
+  if (lower.includes('hello') || lower.includes('hi')) return 'Hello! How are you today?';
+  if (lower.includes('how are you')) return 'I am good, thank you! And you?';
+  if (lower.includes('my name') || lower.includes('i am') || lower.includes("i'm")) return 'Nice to meet you! What do you like to do?';
+  if (lower.includes('thank')) return 'You are welcome! Keep practicing.';
+  if (lower.includes('good morning')) return 'Good morning! How did you sleep?';
+  if (lower.includes('bye') || lower.includes('goodbye')) return 'Goodbye! See you later.';
+
+  const defaults = [
+    'That is interesting! Can you say more?',
+    'Good job! What else do you want to talk about?',
+    'I understand. How is your day?',
+    'Nice! Do you like speaking English?',
+    'Very good. Tell me more.',
+    'Okay! What is your favorite food?',
+    'Great! Where are you from?'
+  ];
+  return defaults[Math.floor(Math.random() * defaults.length)];
+}
+
+function speak(text) {
+  if (!text || !window.speechSynthesis) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.92;
+  utterance.pitch = 1;
+
+  statusEl.className = 'status speaking';
+  statusEl.textContent = 'بيتكلم... / Speaking...';
+
+  utterance.onend = () => {
+    statusEl.className = 'status';
+    statusEl.textContent = 'جاهز / Ready';
+  };
+
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utterance);
+}
+</script>
+</body>
+</html>
